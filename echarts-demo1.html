@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Demo</title>
+  <script src="https://cdn.bootcss.com/echarts/4.4.0-rc.1/echarts.min.js"></script>
+  <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://cdn.bootcss.com/jquery-csv/1.0.5/jquery.csv.min.js"></script>
+  <script src="https://cdn.bootcss.com/lodash.js/4.17.15/lodash.min.js"></script>
+  <script src="record.js"></script>
+</head>
+<body>
+<div style="text-align: center;">
+  <div style="padding: 30px;margin: 10px;border: 5px pink dashed">
+    <input type="file" id="inputfile">
+    <select id="bg">
+      <option value="">背景音乐</option>
+      <option value="./sunny.mp3">sunny</option>
+    </select>
+    <button id="rec" disabled onclick="clickHandler()">录制</button>
+    <a id="link" disabled>下载</a>
+  </div>
+  <div id="container" style="padding: 30px;margin: 10px;border: 5px black dashed">
+
+  </div>
+  <div id="main" style="height: 1000px; width: 563px;margin: 0 auto"></div>
+</div>
+<script type="text/javascript">
+  Date.prototype.format = function (fmt) {
+    var o = {
+      "M+": this.getMonth() + 1,                 //月份
+      "d+": this.getDate(),                    //日
+      "h+": this.getHours(),                   //小时
+      "m+": this.getMinutes(),                 //分
+      "s+": this.getSeconds(),                 //秒
+      "q+": Math.floor((this.getMonth() + 3) / 3), //季度
+      "S": this.getMilliseconds()             //毫秒
+    };
+    if (/(y+)/.test(fmt))
+      fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+    for (var k in o)
+      if (new RegExp("(" + k + ")").test(fmt))
+        fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+    return fmt;
+  }
+  var labelColors = [];
+  var colors = [
+    '#68c3aa', '#EFE42A', '#64BD3D', '#EE9201',
+    '#29AAE3', '#B74AE5', '#0AAF9F', '#E89589',
+    '#ff4844', '#9ac3e5', '#66ac52', '#ffc032', '#549bd3', '#f47e39',
+    'rgb(164,205,238)', 'rgb(42,170,227)', 'rgb(25,46,94)', 'rgb(195,229,235)'
+  ];
+  var itemStyle = {
+    normal: {
+      barBorderRadius: [30, 30, 30, 30],
+      label: {
+        show: true,
+        position: 'right',
+        textStyle: {
+          fontWeight: 'bolder',
+          fontSize: '12',
+          fontFamily: '微软雅黑',
+        }
+      },
+      color: function (params) {
+        var labelColor = labelColors.filter(function (item) {
+          return item.label === params.name
+        });
+        if (labelColor.length > 0) {
+          return labelColor[0].color;
+        }
+        var color = colors.shift();
+        colors.push(color);
+        labelColor = {label: params.name, color: color};
+        labelColors.push(labelColor)
+        return labelColor.color;
+      },
+    }
+  };
+
+  var myChart = echarts.init(document.getElementById('main'));
+
+  option = {
+    legend: {
+      show: false,
+    },
+    title: {
+      text: '世界人口总量',
+      subtext: '子标题...',
+      left: 50,
+      top: 10,
+      formatter: function (name) {
+        return 'Legend ' + name;
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      }
+    },
+    animationDurationUpdate: 2000,
+    xAxis: {
+      type: 'value',
+      splitNumber: 3
+    },
+    yAxis: {
+      type: 'category',
+      data: [],
+    },
+    series: [
+      {
+        name: '2011年',
+        type: 'bar',
+        data: [],
+        itemStyle: itemStyle,
+        barWidth: 20
+      }
+    ]
+  };
+
+  // 使用刚指定的配置项和数据显示图表。
+  myChart.setOption(option);
+  var updateProps = [];
+  var updateScaleProps = [];
+
+  setInterval(function () {
+    var data = updateProps.shift();
+    if (!data) {
+      return;
+    }
+
+    if (!!data.labels) {
+      option.yAxis.data = data.labels;
+    }
+    if (!!data.datas) {
+      var max = Math.max.apply(null, data.datas);
+      var min = Math.min.apply(null, data.datas);
+//      option.xAxis.min = min - 550;
+      option.xAxis.max = max + 1000;
+      option.series[0].data = data.datas
+    }
+    option.title.subtext.text = data.title;
+    myChart.setOption(option);//
+  }, 50)
+
+  var lastData = [];
+
+  function triggerUpdate(title, labels, datas) {
+    if (!labels) {
+      labels = [];
+    }
+    if (!datas) {
+      datas = [];
+    }
+    if (!title) {
+      title = "Waiting..."
+    }
+    //膨胀
+    if (lastData.length > 0) {
+      var scales = getScale(lastData, datas);
+      for (var x = 1; x < 104; x++) {
+        var scaleResult = scaleBy(lastData, datas, scales);
+        if (scaleResult.toString() === lastData.toString()) {
+          break;
+        }
+        lastData = scaleResult;
+        updateScaleProps.push({title: title, labels: labels, datas: scaleResult})
+      }
+    }
+    lastData = datas;
+    updateScaleProps.push({title: title, labels: labels, datas: datas});
+  }
+
+  function getScale(sourceArray, limitArray) {
+    var scales = [];
+    for (var i = 0; i < limitArray.length; i++) {
+      if (!sourceArray[i]) {
+        scales.push(limitArray[i] / 100);
+      } else {
+        scales.push((limitArray[i] - sourceArray[i]) / 100);
+      }
+    }
+    return scales;
+  }
+
+  function scaleBy(sourceArray, limitArray, scales) {
+    var scaleArray = [];
+    for (var i = 0; i < limitArray.length; i++) {
+      var result = 0;
+      if (!sourceArray[i]) {
+        result = 0 + scales[i];
+      } else {
+        result = sourceArray[i] + scales[i];
+      }
+      if (result <= limitArray[i]) {
+      }
+      if (result > limitArray[i]) {
+        result = limitArray[i];
+      }
+      scaleArray.push(parseInt(result));
+    }
+    return scaleArray;
+  }
+
+  function groupBy(sourceArray, attr) {
+    if (!sourceArray) {
+      return null;
+    }
+    var groupResult = {};
+    sourceArray.forEach(function (item) {
+      var label = item[attr];
+      if (!groupResult[label]) {
+        groupResult[label] = [item];
+      } else {
+        groupResult[label].push(item);
+      }
+    });
+    return Object.keys(groupResult).length > 0 ? groupResult : null;
+  }
+
+  function orderBy(sourceArray, attr, orderType) {
+    if (!orderType) {
+      orderType = 'asc';
+    }
+    var compare = function (obj1, obj2) {
+      var val1 = obj1[attr];
+      var val2 = obj2[attr];
+      if (val1 < val2) {
+        return orderType === 'desc' ? 1 : -1;
+      } else if (val1 > val2) {
+        return orderType === 'desc' ? -1 : 1;
+      } else {
+        return 0;
+      }
+    }
+    return sourceArray.sort(compare)
+  }
+
+  $("#inputfile").change(function () {
+    var reader = new FileReader();
+    option.title.text = this.files[0].name;
+    reader.readAsText(this.files[0], "UTF-8");
+    reader.onload = function (evt) {
+      //启用录制按钮
+      rec.disabled = false;
+
+      var fileString = evt.target.result;
+      var originData = $.csv.toObjects(fileString, {
+        header: ['name', 'type', 'value', 'date']
+      });
+      console.info(originData)
+      var dataByMap = originData.map(function (item) {
+        item['date'] = new Date(Date.parse(item['date'].replace(/-/g, "/"))).format("yyyy-MM");
+        item['value'] = parseInt(item['value']);
+        return item;
+      })
+
+      var dataOrderByYear = orderBy(originData, 'date', 'asc');
+      var dataGroupByYear = groupBy(dataOrderByYear, 'date');
+
+      for (var year in dataGroupByYear) {
+        var data = dataGroupByYear[year].map(function (item) {
+          return {name: item.name, type: item.type, value: item.value, date: item.date};
+        })
+        data = orderBy(data, 'value');
+        console.info(data)
+        triggerUpdate(year,
+          data.map(function (item) {
+              return item.type + "·" + item.name;
+            }
+          ),
+          data.map(function (item) {
+            return parseInt(item.value)
+          })
+        );
+      }
+      updateProps = updateScaleProps
+    };
+  });
+
+</script>
+</body>
+</html>

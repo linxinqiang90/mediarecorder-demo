@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+
+<script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+<body>
+
+<div id="box" style="width: 500px;height: 500px;margin: 0 auto;">
+    <canvas id="can" width="500px" height="500px" style="border: 1px solid black;">
+
+    </canvas>
+    <svg></svg>
+</div>
+
+<script>
+var canvas = document.querySelector("svg");
+
+// Optional frames per second argument.
+var stream = canvas.captureStream(25);
+var recordedChunks = [];
+
+console.log(stream);
+var options = { mimeType: "video/webm; codecs=vp9" };
+mediaRecorder = new MediaRecorder(stream, options);
+
+stream.addTrack()
+
+mediaRecorder.ondataavailable = handleDataAvailable;
+mediaRecorder.start();
+
+function handleDataAvailable(event) {
+  console.log("data-available",event);
+  if (event.data.size > 0) {
+    recordedChunks.push(event.data);
+    console.log(recordedChunks);
+    download();
+  } else {
+    // ...
+  }
+}
+function download() {
+  var blob = new Blob(recordedChunks, {
+    type: "video/webm"
+  });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  document.body.appendChild(a);
+  a.style = "display: none";
+  a.href = url;
+  a.download = "test.webm";
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+// demo: to download after 9sec
+setTimeout(event => {
+  console.log("stopping");
+  mediaRecorder.stop();
+}, 9000);
+
+
+function GetRandomNum(Min,Max)
+        {
+            var Range = Max - Min;
+            var Rand = Math.random();
+            return(Min + Math.round(Rand * Range));
+        }
+
+        function mouseCoords(ev){
+            var e = event || window.event;
+            var x = e.offsetX || e.layerX;
+            var y = e.offsetY || e.layerY;
+            return {x,y};
+        }
+
+        var globl_w = 500;
+        var globl_h = 500;
+        makerect(0,0,globl_w,globl_w);
+
+        //鼠标点击生成圆
+        $("#can").click(function(e){
+            var ev = ev || window.event;
+            var mousePos = mouseCoords(ev);
+            mousePosX = mousePos.x;
+            mousePosY = mousePos.y;
+            console.log(mousePosX);
+            console.log(mousePosY);
+            makearc(mousePosX,mousePosY,30,0,180,'red');
+        })
+
+        function myAnimation(){
+            ctx.clearRect(0, 0, globl_w, globl_h);
+        }
+
+        //生成圆
+        function makearc(x,y,r,s,e,color){
+            var can = document.getElementById('can');
+            var ctx = can.getContext("2d");
+            //ctx.clearRect(0,0,500,500);
+            ctx.beginPath();
+            ctx.fillStyle=color;
+            ctx.arc(x,y,r,s,e);
+            ctx.fill();
+        }
+
+        function makerect(x,y,w,h){
+            var can = document.getElementById('can');
+            var ctx = can.getContext("2d");
+            ctx.strokeRect(x,y,w,h);
+        }
+
+
+
+
+</script>
+
+</body>
+</html>

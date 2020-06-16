@@ -1,0 +1,144 @@
+<head>
+  <style>
+    body {
+      margin: auto;
+      max-width: 550px;
+      width: 100%;
+      font: 14px arial;
+      padding-top: 15px;
+    }
+    select {
+      border: none;
+      outline: none;
+      margin: 15px 0 15px 0;
+    }
+  </style>
+</head>
+<body>
+
+Choose year: <select>
+  <option>2019</option>
+  <option>2018</option>
+</select>
+
+<canvas width="550" height="220"></canvas>
+
+<script>
+
+  const arrMax = (arr) => {
+    var max = 0;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] > max) {
+        max = arr[i]
+      } else if (i != 0 && arr[i - 1] < arr[i] && arr[i] > max) {
+        max = arr[i]
+      }
+    }
+    return Math.ceil(max / 25) * 25;
+  }
+
+  const scaleY = (arr, height) => {
+    var temp = [];
+    var max  = arrMax(arr);
+    var big  = max / height;
+    for (var i = 0; i < arr.length; i++) {
+      temp[i] = Math.round(arr[i] / big)
+    }
+    return temp;
+  }
+
+  const calcTicks = (data, height) => {
+    var max = arrMax(data[data.option]);
+    for (var i = 0; i < max; i++) {
+      if (max % i == 0 && ![0, 1, 2].includes(i)) {
+        return [height / i, i, max / i];
+      }
+    }
+  }
+
+  const draw_rect = (dom, ctx, data, select, attr) => {
+    var scale = scaleY([...data[data.option]], dom.height - attr.y * 2);
+    var width = (dom.width - (attr.x * 2) - attr.p) / select.lerp.length;
+    var xPos  = (dom.width - (attr.x * 2) + attr.p / 2) / select.lerp.length;
+    var align = ctx.textAlign = "center";
+    for (var i = 0; i < select.lerp.length; i++) {
+      select.lerp[i] += (scale[i] - select.lerp[i]) * attr.s;
+      ctx.fillStyle = "steelblue";
+      ctx.fillRect(attr.x + xPos * i,
+        dom.height - attr.y,
+        width,
+        -select.lerp[i]);
+      ctx.fillStyle = "#333";
+      ctx.fillText(data[data.option][i],
+        attr.x + xPos * i + width / 2,
+        dom.height - attr.y - select.lerp[i] - 5)
+    }
+  }
+
+  const draw_axisY = (dom, ctx, data, select, attr) => {
+    var tickArr = calcTicks(data, dom.height - attr.y * 2);
+    var align   = ctx.textAlign = "right";
+    var color   = ctx.fillStyle = "#333";
+    for (var i = 0; i < tickArr[1]; i++) {
+      select.tick[i] += ((tickArr[0]) * (i + 1) - select.tick[i]) * attr.s;
+      ctx.fillRect(attr.x - 5,
+        dom.height - attr.y - select.tick[i],
+        dom.width - attr.x - attr.x / 2,
+        .5);
+      ctx.fillText(tickArr[2] * (i + 1),
+        attr.x - 10,
+        dom.height - attr.y - select.tick[i] + 5);
+    }
+  }
+
+  const draw_axisX = (dom, ctx, data, select, attr) => {
+    var xPos  = (dom.width - (attr.x * 2) + attr.p / 2) / select.lerp.length;
+    var width = (dom.width - (attr.x * 2) - attr.p) / select.lerp.length;
+    var align = ctx.textAlign = "center";
+    var color = ctx.fillStyle = "#333";
+    for (var i = 0; i < data.month.length; i++) {
+      ctx.fillText(data.month[i],
+        attr.x + xPos * i + width / 2,
+        dom.height - (attr.y / 2))
+    }
+  }
+
+  const draw = (dom, ctx, data, select, attr) => {
+    var clear = ctx.clearRect(0, 0, dom.width, dom.height);
+    var font  = ctx.font = "12px Arial";
+    var axisY = draw_axisY(dom, ctx, data, select, attr);
+    var axisX = draw_axisX(dom, ctx, data, select, attr);
+    var rect  = draw_rect(dom, ctx, data, select, attr);
+  }
+
+  const input = (data, select, height) => {
+    document.querySelector("select").onchange = e => {
+      select.lerp = scaleY([...data[data.option]], height);
+      data.option = e.target.value;
+    }
+  }
+
+  const main = (() => {
+    var dom = document.querySelector('canvas');
+  var ctx = dom.getContext('2d');
+  var data = {
+    option: "2019",
+    "2019": [40, 50, 112, 111, 93],
+    "2018": [222, 138, 75, 120, 200],
+    month:  ["Jan", "Feb", "Mar", "Apr", "Maj"],
+  }
+  var attr = {x: 45, y: 25, p: 35, s: .1};
+  var select = {
+    lerp: new Array(data[data.option].length).fill(0),
+    tick: new Array(calcTicks(data, dom.height - attr.y * 2)[1]).fill(0)
+  }
+  var event = input(data, select, dom.height - attr.y * 2);
+  const loop = (t) => {
+    draw(dom, ctx, data, select, attr);
+    requestAnimationFrame(loop);
+  }
+  return requestAnimationFrame(t => loop(t));
+  })()
+
+</script>
+</body>

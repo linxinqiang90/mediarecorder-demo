@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+    }
+  </style>
+</head>
+
+<body>
+<canvas height=450 width=550></canvas>
+<script>
+  // reference to the canvas element
+  var canvas = document.querySelector('canvas');
+
+  // a reference to our canvas' context, think of it as a "toolbox"
+  var context = canvas.getContext('2d');
+
+  // draw a box around our canvas border if we want, helps with positioning elements
+  context.fillStyle = 'black';
+  context.strokeRect(0, 0, canvas.width, canvas.height);
+
+  var margin = {top: 20, bottom: 40, left: 30, right: 20};
+  var width = canvas.width - margin.left - margin.right;
+  var height = canvas.height - margin.top - margin.bottom;
+
+  // center our drawing using our margins
+  context.translate(margin.left, margin.top);
+
+  var data = [21, 50, 10, 35, 90, 25, 12, 67, 5, 3, 18];
+
+  // x scale
+  var x = d3.scaleBand()
+    .domain(data)
+    .rangeRound([0, width])
+    .padding(0.1);
+
+  // y scale
+  var y = d3.scaleLinear()
+    .domain([0, d3.max(data)])
+    .rangeRound([height, 0]);
+
+  // y-axis ticks set up
+  var yTickCount = 10;
+  var yTicks = y.ticks(yTickCount);
+
+  // draw x-axis ticks at the center of the bottom of our bars
+  // tell canvas we want to start drawing a path
+  context.beginPath();
+
+  // iterate over our x domain values
+  x.domain().forEach(d = > {
+    // tell canvas to draw lines at the bottom of our bars
+    context.moveTo(x(d) + x.bandwidth() / 2, height);
+  context.lineTo(x(d) + x.bandwidth() / 2, height + 6);
+  })
+  ;
+
+  // set our stroke style to black & draw it
+  context.strokeStyle = '#000';
+  context.stroke();
+
+  // apply x-axis labels
+  context.textAlign = "center";
+  context.textBaseline = "top";
+
+  x.domain().forEach((d, i) = > {
+    context.fillText(i, x(d) + x.bandwidth() / 2, height + 6);
+  })
+  ;
+
+  // attempting to place labels for x values at the top of bars
+  context.textAlign = "center";
+  context.textBaseline = "bottom";
+
+  x.domain().forEach((d, i) = > {
+    context.fillText(d, x(d) + x.bandwidth() / 2, y(d));
+  })
+  ;
+
+  context.strokeStyle = "#000";
+  context.stroke();
+
+  // y-axis draw
+  yTicks.forEach(d = > {
+    context.moveTo(0, y(d) + 0.5);
+  context.lineTo(-6, y(d) + 0.5);
+  })
+  ;
+
+  context.strokeStyle = "#000";
+  context.stroke();
+
+  // y-axis labels
+  context.textAlign = "right";
+  context.textBaseline = "middle";
+
+  yTicks.forEach(d = > {
+    context.fillText(d, -9, y(d));
+  })
+  ;
+
+  // y-axis
+  context.beginPath();
+  context.lineTo(0.5, 0.5);
+  context.lineTo(0.5, height + 0.5);
+  context.strokeStyle = "#000";
+  context.stroke();
+
+  // y-axis label
+  context.save();
+  context.rotate(-Math.PI / 2);
+  context.textAlign = "right";
+  context.textBasline = "top";
+  context.fillText("Y Value", -10, 10);
+  context.restore();
+
+  // draw bars
+  context.fillStyle = 'steelblue';
+
+  data.forEach((d, i) = > {
+    context.fillRect(x(d), y(d), x.bandwidth(), height - y(d));
+  })
+  ;
+
+</script>
+</body>
